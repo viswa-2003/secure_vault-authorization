@@ -1,0 +1,18 @@
+services:
+  blockchain:
+    image: node:18-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: npx hardhat node --hostname 0.0.0.0
+    ports:
+      - "8545:8545"
+
+  deployer:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    depends_on:
+      - blockchain
+    environment:
+      - HARDHAT_NETWORK=docker
