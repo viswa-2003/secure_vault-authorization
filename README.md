@@ -1,346 +1,166 @@
-🔐 Secure Vault System
-On-Chain Authorization with Deterministic Replay Protection
+🔐 Secure Vault Authorization System
+A minimal, security-first Ethereum vault system that enables off-chain authorized ETH withdrawals with strong replay protection, deterministic execution, and clear security guarantees.
 
-A production-grade Web3 vault architecture that enforces single-use, cryptographically authorized withdrawals with strict on-chain replay protection.
+This project intentionally prioritizes auditability and correctness over feature richness.
 
-📌 Overview
+📌 Project Overview
+The Secure Vault System allows users to withdraw native ETH only using off-chain signed authorizations issued by a single trusted signer.
 
-Secure Vault System is a defensive multi-contract blockchain architecture designed to safely manage and withdraw native blockchain funds (ETH).
+Each authorization:
 
-Inspired by real-world DeFi protocol designs, it strictly separates:
+Is cryptographically verified
 
-🏦 Asset custody
+Can be executed exactly once
 
-🔐 Permission validation
+Cannot be replayed or duplicated
 
-This separation reduces risk, limits trust boundaries, and significantly improves auditability.
+Is bound to strict withdrawal parameters
 
-💡 Core Principle
-Funds move only when explicitly authorized — exactly once — under all execution conditions.
+This design ensures maximum clarity, safety, and deterministic behavior under adversarial conditions.
 
-🎯 Design Objectives
+🎯 Design Goals
+Strong replay protection
 
+Clear authorization scoping
+
+Deterministic state transitions
+
+Easy to audit and reason about
+
+Minimal attack surface
+
+⚖️ Intentional Trade-offs
+The following constraints are deliberate design decisions:
+
+Trade-off	Reason
+Single trusted off-chain signer	Simplifies authorization logic and reduces attack surface
+Native ETH only (no ERC-20)	Avoids token-specific vulnerabilities
+No authorization expiration	Keeps authorization logic deterministic
+No upgradeability	Prevents proxy-related risks
+Gas optimization not prioritized	Clarity and security > gas savings
+
+🛡️ Security Guarantees
 This system guarantees:
 
-🔒 Explicit authorization for every withdrawal
-
-🔁 Replay protection (single-use authorizations only)
-
-🧮 Correct accounting across all execution paths
-
-🧱 Strict separation of responsibilities
-
-🛡️ Defense against malicious callers
-
-🔍 High observability via events
-
-♻️ Fully reproducible local deployment
-
-🧠 High-Level Architecture
-
-The system consists of two independent on-chain contracts, each with a clearly defined responsibility.
-
-🏦 SecureVault Contract
-
-(Custody Layer)
-
-Primary Role:
-Safely holds and transfers ETH.
-
-Responsibilities
-
-Accept ETH deposits from any address
-
-Hold pooled funds securely
-
-Request authorization validation
-
-Execute withdrawals only after confirmation
-
-Emit clear observability events
-
-Explicitly Does NOT
-
-❌ Verify signatures
-
-❌ Track authorization usage
-
-❌ Generate authorization logic
-
-🔍 This keeps the vault minimal, auditable, and low-risk.
-
-🔐 AuthorizationManager Contract
-
-(Permission Layer)
-
-Primary Role:
-Validates permissions and enforces replay protection.
-
-Responsibilities
-
-Verify off-chain generated authorizations
-
-Validate cryptographic signatures
-
-Track authorization usage
-
-Ensure each authorization is consumed exactly once
-
-Explicitly Does NOT
-
-❌ Hold funds
-
-❌ Transfer ETH
-
-❌ Depend on vault logic
-
-🔐 Authorization correctness is enforced independently of custody.
-
-🔗 Why This Separation Matters
-
-This architectural split ensures:
-
-A compromised vault cannot fabricate permissions
-
-A compromised authorization system cannot steal funds
-
-Each contract remains small, focused, and auditable
-
-Security reviews can be isolated and scoped
-
-✅ Mirrors battle-tested DeFi protocol patterns
-
-🔁 End-to-End Withdrawal Flow
-
-User deposits ETH into SecureVault
-
-Trusted off-chain authority constructs a withdrawal authorization
-
-Authorization is cryptographically signed
-
-Withdrawal request is sent to SecureVault
-
-SecureVault forwards data to AuthorizationManager
-
-AuthorizationManager:
-
-Reconstructs the message
-
-Verifies signature authenticity
-
-Confirms authorization is unused
-
-Marks it as consumed
-
-SecureVault:
-
-Updates internal state
-
-Transfers ETH
-
-Emits a withdrawal event
-
-🚫 At no point can funds move without explicit authorization
-
-🧾 Authorization Scope
-
-Each authorization is strictly bound to:
-
-Vault contract address
-
-Blockchain network (chainId)
-
-Recipient address
-
-Withdrawal amount
-
-Unique nonce
-
-This guarantees authorizations are:
-
-Vault-specific
-
-Network-specific
-
-Amount-specific
-
-Recipient-specific
-
-Single-use only
-
-🆔 Deterministic Authorization ID
-
-Each authorization generates a unique ID:
-
-keccak256(
-  vault_address,
-  recipient,
-  amount,
-  chainId,
-  nonce
-)
-
-Why this matters:
-
-Prevents ambiguity
-
-Enables simple replay tracking
-
-Guarantees uniqueness across vaults & networks
-
-🔁 Replay Protection (On-Chain)
-
-Replay attacks are prevented by:
-
-Storing authorization IDs on-chain
-
-Rejecting already-used IDs
-
-Marking IDs as consumed before success
-
-Once used, an authorization:
-
-❌ Cannot be reused
-
-❌ Cannot be replayed
-
-❌ Cannot be modified
-
-❌ Cannot be transferred across chains or vaults
-
-All replay attempts revert deterministically.
-
-🧮 State Safety & Correctness
-
-Strict safety rules ensure:
-
-Vault balance is checked before withdrawal
-
-Authorization is validated before state change
-
-State updates occur before ETH transfer
-
-All failures revert atomically
-
-This guarantees:
-
-No double withdrawals
-
-No partial execution
-
-No inconsistent state
-
-No negative balances
-
-📡 Events & Observability
-
-The system emits events for every critical action:
-
-Event	Description
-Deposit	ETH received by the vault
-AuthorizationUsed	Authorization consumed
-Withdrawal	ETH transferred to recipient
-
-❗ Failed operations revert cleanly and emit no misleading events.
-
-🧪 Testing Strategy
-
-Automated tests validate:
-
-ETH deposits
-
-Authorized withdrawals
-
-Replay attack prevention
-
-Tampered parameter rejection
-
-Tests simulate:
-
-Off-chain authorization generation
-
-Adversarial replay attempts
-
-Parameter manipulation attacks
-
-✅ System invariants hold under malicious conditions
-
-🐳 Local Deployment (Docker)
-
-The entire system is fully reproducible using Docker.
-
+✅ Authorizations execute exactly once
+
+✅ Replay attacks are impossible
+
+✅ Unauthorized withdrawals cannot occur
+
+✅ Cross-contract calls cannot duplicate effects
+
+✅ State transitions remain deterministic
+
+🧠 Core Security Mechanisms
+1️⃣ Off-Chain Authorization
+A trusted signer generates a signed message
+
+Message includes strict withdrawal parameters
+
+On-chain verification uses ecrecover
+
+2️⃣ Replay Protection
+Each authorization includes a unique nonce
+
+Nonces are tracked on-chain
+
+Once used, a nonce can never be reused
+
+3️⃣ Deterministic Execution
+No time-based logic
+
+No upgrade hooks
+
+No external token dependencies
+
+All state transitions are predictable and auditable
+
+4️⃣ Defensive State Management
+State updates occur before ETH transfers
+
+Explicit revert conditions
+
+No silent failures
+
+🏗️ Architecture Overview
+pgsql
+Copy code
+┌───────────────┐
+│ Off-Chain     │
+│ Signer        │
+│ (Trusted)     │
+└──────┬────────┘
+       │ Signed Authorization
+       ▼
+┌──────────────────────────┐
+│ Vault Contract           │
+│                          │
+│ • Signature verification│
+│ • Nonce tracking         │
+│ • ETH withdrawal logic  │
+└──────────────────────────┘
+📁 Project Structure
+pgsql
+Copy code
+secure-vault-authorization/
+│
+├── contracts/
+│   ├── Vault.sol
+│   └── Authorization.sol
+│
+├── scripts/
+│   └── deploy.js
+│
+├── test/
+│   └── vault.test.js
+│
+├── docker-compose.yml
+├── Dockerfile
+├── hardhat.config.js
+├── .env.example
+└── README.md
+🐳 Dockerized Setup
 Prerequisites
-
 Docker
 
 Docker Compose
 
-Run the System
-docker-compose up
+🚀 Run Locally
+bash
+Copy code
+docker-compose up --build
+This will:
 
+Start a local Ethereum environment
 
-This automatically:
+Compile and deploy contracts deterministically
 
-Starts a local blockchain
+Prepare the system for testing and evaluation
 
-Compiles contracts
+🔍 Testing & Verification
+Deterministic deployment
 
-Deploys AuthorizationManager
+Adversarial testing supported
 
-Deploys SecureVault
+Replay attempts explicitly tested
 
-Outputs deployed addresses
+Unauthorized calls revert safely
 
-🧠 No manual steps required
+🧪 Example Threats Considered
+Signature replay
 
-📂 Repository Structure
-/
-├─ contracts/
-│  ├─ AuthorizationManager.sol
-│  └─ SecureVault.sol
-├─ scripts/
-│  └─ deploy.js
-├─ tests/
-│  └─ system.spec.js
-├─ docker/
-│  ├─ Dockerfile
-│  └─ entrypoint.sh
-├─ docker-compose.yml
-├─ hardhat.config.js
-└─ README.md
+Cross-contract re-entry
 
-⚠️ Assumptions & Limitations
+Parameter tampering
 
-Single trusted off-chain signer
+Unauthorized signer usage
 
-Native ETH only (no ERC-20)
+State desynchronization
 
-No authorization expiration
+All are explicitly mitigated.
 
-No upgradeability
-
-Gas optimization not prioritized
-
-These are intentional trade-offs to maximize security clarity.
-
-🛡️ Security Guarantees
-
-This system guarantees:
-
-Authorizations execute exactly once
-
-Replay attacks are impossible
-
-Unauthorized withdrawals cannot occur
-
-Cross-contract calls cannot duplicate effects
-
-State transitions remain deterministic
-
-🏁 Final Notes
-
-This project demonstrates:
-
+🧩 What This Project Demonstrates
 Secure multi-contract design
 
 Strong authorization scoping
@@ -352,8 +172,10 @@ Defensive state management
 Production-aligned Web3 architecture
 
 ✅ Ready for Evaluation
-
 ✔ Fully Dockerized
 ✔ Deterministic deployment
 ✔ Secure under adversarial testing
 ✔ Easy to audit and reason about
+
+📜 License
+MIT License
